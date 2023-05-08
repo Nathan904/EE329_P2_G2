@@ -40,8 +40,7 @@ typedef enum {
 	SAW
 } Mode;
 Mode currentMode = SQUARE;
-
-
+uint8_t frequency = 100U;
 /**
   * @brief  The application entry point.
   * @retval int
@@ -58,23 +57,35 @@ int main(void)
 	lcdInit();
 	lcdWriteString("HELLO");
 	DAC_init();
-	squareWave(100U, 0.25f);
+	squareWave(frequency, 0.25f);
 
 
-
+	updateLCD();
 
   while (1)
   {
 		switch (currentMode) {
 			case SQUARE:
-				squareWave();
+				square();
 				break;
 			default:
 				break;
 		}
   }
 }
-void squareWave(void) {
+void updateLCD() {
+	switch (currentMode) {
+		case SQUARE:
+			lcdClearDisplay();
+			lcdWriteString("SQU 100 ");
+			lcdWriteString("Hz LAST");
+			break;
+		default:
+			break;
+	}
+
+}
+void square(void) {
 	switch (state) {
 		case HIGH:
 			DAC_latch_off();

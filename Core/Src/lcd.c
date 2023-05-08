@@ -137,9 +137,11 @@ void lcdSendCommand(uint8_t command){
 	uint32_t command_ = command;
 	LCD_PORT->ODR   &= ~(LCD_DATA_BITS);               // isolate cmd bits
 	LCD_PORT->ODR   |= ((command_ >> 4) & LCD_DATA_BITS); // HIGH shifted low
+	delay_us(10);
 	lcdEnablePulse();                                    // latch HIGH NIBBLE
 	LCD_PORT->ODR   &= ~(LCD_DATA_BITS);               // isolate cmd bits
 	LCD_PORT->ODR   |= (command_ & LCD_DATA_BITS);      // LOW nibble
+	delay_us(10);
 	lcdEnablePulse();                                    // latch LOW NIBBLE
 }
 
@@ -194,6 +196,8 @@ void lcdPinSetup(void){
 }
 
 void lcdClearDisplay(void){
+	SysTick_Init();
 	lcdSendCommand(LCD_CMD_CLR_DISP);
 	delay_us(LCD_DELAY_CLEAR_DISPLAY);
+	SysTick_Return();
 }

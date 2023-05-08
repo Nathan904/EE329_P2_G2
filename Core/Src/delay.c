@@ -34,7 +34,8 @@ void SysTick_Return(void) {
  */
 void delay_us(const uint32_t time_us) {
 	// set the counts for the specified delay
-	SysTick->LOAD = ((uint32_t)((time_us * (4000000U / 1000000)) - 1));
+	SysTick->LOAD =
+			((uint32_t) ((time_us * (SystemCoreClock / 1000000)) - 1));
 	SysTick->VAL = 0;                                   // clear the timer count
 	SysTick->CTRL &= ~(SysTick_CTRL_COUNTFLAG_Msk);      // clear the count flag
 	while (!(SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk)); // wait for the flag
