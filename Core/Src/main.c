@@ -47,7 +47,7 @@ typedef enum {
 } Mode;
 Mode currentMode = SQUARE;
 uint16_t frequency = 100U;
-float dutyCycle = 0.5;
+float dutyCycle = 0.5f;
 char dutyCycleLCD[2] = { 5 + '0', 0 + '0' };
 uint8_t kpLast = 0x10U;
 /**
@@ -115,6 +115,21 @@ void checkUserInput(void) {
 			frequency = 500U;
 			updateWave();
 			kpLast = kp;
+		case 0x0:
+			dutyCycle = 0.5f;
+			updateWave();
+			kpLast = kp;
+		case 0xe:
+			dutyCycle += 0.1f;
+			dutyCycle = (dutyCycle > 0.9f) ? (0.9f) : (dutyCycle);
+			updateWave();
+			kpLast = kp;
+			break;
+		case 0xf:
+			dutyCycle -= 0.1f;
+			dutyCycle = (dutyCycle < 0.1f) ? (0.1f) : (dutyCycle);
+			updateWave();
+			kpLast = kp;
 			break;
 		default:
 			break;
@@ -123,7 +138,7 @@ void checkUserInput(void) {
 void updateWave() {
 	switch (currentMode) {
 		case SQUARE:
-			updateLCD();
+			//updateLCD();
 			squareWave(frequency, dutyCycle);
 			break;
 		case SINE:
@@ -152,13 +167,10 @@ void square(void) {
 		case HIGH:
 			DAC_latch_off();
 			DAC_write(V_LOW);
-			state = WAIT;
 			break;
 		case LOW:
 			DAC_latch_off();
 			DAC_write(V_HIGH);
-
-			state = WAIT;
 			break;
 		case WAIT:
 			break;
@@ -179,12 +191,6 @@ void TIM2_IRQHandler(void) {
 	}
 
 
-}
-void TIM5_IRQHandler(void) {
-	//TIM5->CR1 &= ~(TIM_CR1_CEN);
-	TIM5->DIER &= ~(TIM_DIER_UIE);
-	//NVIC_DisableIRQ(TIM5_IRQn);
-	debounce = 1;
 }
 
 
@@ -224,7 +230,7 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)

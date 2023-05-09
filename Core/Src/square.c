@@ -17,7 +17,7 @@ uint32_t reloadVal;
 void squareWave(uint32_t frequency, float dutyCycle) {
 
 
-	reloadVal = (100000 / frequency);
+	reloadVal = (100000UL / frequency);
 	uint32_t captureVal = getDutyCycle(dutyCycle);
 
 	updateTIM2(reloadVal, captureVal);
@@ -31,8 +31,5 @@ uint32_t getDutyCycle(float dutyCycle) {
 	uint32_t val = ((uint32_t) (reloadVal * dutyCycle));
 	return (val);
 
-}
 
-void setDutyCycle(float dutyCycle) {
-	TIM5->CCR1 = ((uint32_t) (reloadVal * dutyCycle));
 }

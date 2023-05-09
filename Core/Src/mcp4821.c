@@ -51,10 +51,10 @@ uint16_t DAC_volt_conv(uint16_t mv) {
  */
 void DAC_write(uint16_t word) {
 	SPI1->DR = word;
-	//while (!(SPI1->SR & SPI_SR_TXE))
-	//; // Wait for data to finish moving to FIFO register
-	//while (SPI1->SR & SPI_SR_BSY)
-	//; // Wait for the message to send (busy flag cleared)
+	while (!(SPI1->SR & SPI_SR_TXE))
+		; // Wait for data to finish moving to FIFO register
+	while (SPI1->SR & SPI_SR_BSY)
+		; // Wait for the message to send (busy flag cleared)
 }
 void DAC_latch(void) {
 	GPIOA->ODR &= ~GPIO_PIN_6;
