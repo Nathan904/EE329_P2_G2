@@ -20,8 +20,14 @@
 #include "square.h"
 #include "mcp4821.h"
 #include "lcd.h"
+#include "keypad.h"
+#include "timer.h"
 #define V_HIGH ((3000U) | 0x1000U)
 #define V_LOW 0x1000U
+#define FLOAT_TO_PERCENT_CHAR(f)\
+	uint8_t val=(uint8_t)(f*100); \
+	dutyCycleLCD[1] = ((val/10)) + '0';\
+	dutyCycleLCD[0] = (val%10) + '0';
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -37,10 +43,13 @@ State state = LOW;
 typedef enum {
 	SQUARE,
 	SINE,
-	SAW
+	RAMP
 } Mode;
 Mode currentMode = SQUARE;
-uint8_t frequency = 100U;
+uint16_t frequency = 100U;
+float dutyCycle = 0.5;
+char dutyCycleLCD[2] = { 5 + '0', 0 + '0' };
+uint8_t kpLast = 0x10U;
 /**
   * @brief  The application entry point.
   * @retval int
@@ -57,7 +66,9 @@ int main(void)
 	lcdInit();
 	lcdWriteString("HELLO");
 	DAC_init();
-	squareWave(frequency, 0.25f);
+	setupKeypad();
+	setupTIM2();
+	squareWave(frequency, dutyCycle);
 
 
 	updateLCD();
@@ -71,14 +82,65 @@ int main(void)
 			default:
 				break;
 		}
+		checkUserInput();
   }
+}
+
+void checkUserInput(void) {
+	uint8_t kp = getKeypad();
+	switch (kp) {
+		case 0x10:
+			break;
+		case 0x1:
+			frequency = 100U;
+			updateWave();
+			kpLast = kp;
+			break;
+		case 0x2:
+			frequency = 200U;
+			updateWave();
+			kpLast = kp;
+			break;
+		case 0x3:
+			frequency = 300U;
+			updateWave();
+			kpLast = kp;
+			break;
+		case 0x4:
+			frequency = 400U;
+			updateWave();
+			kpLast = kp;
+			break;
+		case 0x5:
+			frequency = 500U;
+			updateWave();
+			kpLast = kp;
+			break;
+		default:
+			break;
+	}
+}
+void updateWave() {
+	switch (currentMode) {
+		case SQUARE:
+			updateLCD();
+			squareWave(frequency, dutyCycle);
+			break;
+		case SINE:
+			break;
+		case RAMP:
+			break;
+		default:
+			break;
+	}
 }
 void updateLCD() {
 	switch (currentMode) {
 		case SQUARE:
-			lcdClearDisplay();
-			lcdWriteString("SQU 100 ");
-			lcdWriteString("Hz LAST");
+			break;
+		case SINE:
+			break;
+		case RAMP:
 			break;
 		default:
 			break;
@@ -118,6 +180,14 @@ void TIM2_IRQHandler(void) {
 
 
 }
+void TIM5_IRQHandler(void) {
+	//TIM5->CR1 &= ~(TIM_CR1_CEN);
+	TIM5->DIER &= ~(TIM_DIER_UIE);
+	//NVIC_DisableIRQ(TIM5_IRQn);
+	debounce = 1;
+}
+
+
 
 /**
   * @brief System Clock Configuration

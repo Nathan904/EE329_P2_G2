@@ -61,10 +61,11 @@ void lcdInit(void){
  * @retval void
  */
 void lcdSetCursor(uint8_t line,uint8_t column){
-	//SysTick_Init();
+	SysTick_Init();
 	LCD_PORT->ODR &= ~(LCD_RS_PIN | LCD_RW_PIN);
 	uint8_t address = (((line * LCD_LINE_LENGTH) + column) | (0x1U << 7));
 	lcdSendCommand(address);
+	SysTick_Return();
 }
 
 /**

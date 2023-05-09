@@ -22,10 +22,6 @@
 #ifndef __MAIN_H
 #define __MAIN_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l4xx_hal.h"
 
@@ -89,7 +85,10 @@ void Error_Handler(void);
 #define LD2_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-
+void checkUserInput(void);
+void square(void);
+void updateLCD(void);
+void updateWave(void);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

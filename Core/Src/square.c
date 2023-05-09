@@ -20,7 +20,7 @@ void squareWave(uint32_t frequency, float dutyCycle) {
 	reloadVal = (100000 / frequency);
 	uint32_t captureVal = getDutyCycle(dutyCycle);
 
-	initTIM2(reloadVal, captureVal);
+	updateTIM2(reloadVal, captureVal);
 
 }
 

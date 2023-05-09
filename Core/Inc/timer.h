@@ -14,5 +14,7 @@ void initTIM3(void);
 void initTIM4(uint32_t reloadValue);
 void delay_ms(uint32_t ms);
 void initTIM2(uint32_t reloadCount, uint32_t ccr1Val);
+void updateTIM2(uint32_t reloadCount, uint32_t ccr1Val);
+void setupTIM2();
 
 #endif /* INC_TIMER_H_ */
