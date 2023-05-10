@@ -16,8 +16,8 @@
 #define TURN_COLUMNS_ON KP_PORT->BSRR = (colPins[0] | colPins[1] | colPins[2] | colPins[3])
 #define TURN_COLUMNS_OFF KP_PORT->BRR = (colPins[0] | colPins[1] | colPins[2] | colPins[3])
 #define TURN_COLUMN_OFF(val) KP_PORT->BRR = (colPins[val])
-#define DEBOUNCE_DELAY 250UL	//Number of ms before returning another valid keypad press
-#define KP_TIM_PRESCALER (32000UL/4) // Prescaler value for TIM2 sets each tick to 1ms
+#define DEBOUNCE_DELAY 200U	//Number of ms before returning another valid keypad press
+#define KP_TIM_PRESCALER (0xFFFFU) // Prescaler value for TIM2 sets each tick to 1ms
 // Global variables
 uint32_t tim2CounterAtReference = 0; // Variable to store the TIM2 counter value at the reference time point
 
@@ -111,6 +111,7 @@ void TIM5_Init(void) {
 	TIM5->CR1 |= (0x2U << TIM_CR1_CKD_Pos);
 	// Set the prescaler value to generate 1 millisecond timebase
 	TIM5->PSC = KP_TIM_PRESCALER;
+	TIM5->ARR = 0xFFFF;
 	// Start the timer
 	TIM5->CR1 |= TIM_CR1_CEN;
 }
@@ -133,6 +134,6 @@ uint32_t getElapsedTime(void) {
 	if (currentTime >= tim2CounterAtReference) {
 		return (currentTime - tim2CounterAtReference); // Calculate elapsed time
 	} else {
-		return (0xFFFFFFFFUL - tim2CounterAtReference + currentTime); // Counter overflow handler
+		return (0xFFFFU - tim2CounterAtReference + currentTime); // Counter overflow handler
 	}
 }

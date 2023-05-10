@@ -115,10 +115,12 @@ void checkUserInput(void) {
 			frequency = 500U;
 			updateWave();
 			kpLast = kp;
+			break;
 		case 0x0:
 			dutyCycle = 0.5f;
 			updateWave();
 			kpLast = kp;
+			break;
 		case 0xe:
 			dutyCycle += 0.1f;
 			dutyCycle = (dutyCycle > 0.9f) ? (0.9f) : (dutyCycle);
