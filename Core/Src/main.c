@@ -34,22 +34,37 @@
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 
+/**
+ * @enum State
+ * @brief enumeration for the square wave
+ *
+ */
 typedef enum {
-	LOW,
-	HIGH,
-	WAIT
+	LOW, /**< LOW */
+	HIGH,/**< HIGH */
+	WAIT /**< WAIT */
 } State;
 State state = LOW;
+
+/**
+ * @enum MODE
+ * @brief enumeration for the output wave type
+ *
+ */
 typedef enum {
-	SQUARE,
-	SINE,
-	RAMP
+	SQUARE,/**< SQUARE */
+	SINE, /**< SINE */
+	RAMP /**< RAMP */
 } Mode;
+
+// Initialize default mode (100 Hz square wave 50% duty)
 Mode currentMode = SQUARE;
 uint16_t frequency = 100U;
 float dutyCycle = 0.5f;
+
 char dutyCycleLCD[2] = { 5 + '0', 0 + '0' };
 uint8_t kpLast = 0x10U;
+
 /**
   * @brief  The application entry point.
   * @retval int
@@ -86,6 +101,13 @@ int main(void)
   }
 }
 
+/**
+ * @fn void checkUserInput(void)
+ * @brief keypad user input handler
+ * switch with case for each possible user input
+ * @todo add the rest
+ *
+ */
 void checkUserInput(void) {
 	uint8_t kp = getKeypad();
 	switch (kp) {
@@ -128,6 +150,7 @@ void checkUserInput(void) {
 			kpLast = kp;
 			break;
 		case 0xf:
+			// @TODO does anyone have a 4x4 keypad with working asterisk?
 			dutyCycle -= 0.1f;
 			dutyCycle = (dutyCycle < 0.1f) ? (0.1f) : (dutyCycle);
 			updateWave();
@@ -140,7 +163,7 @@ void checkUserInput(void) {
 void updateWave() {
 	switch (currentMode) {
 		case SQUARE:
-			//updateLCD();
+			//updateLCD(); @TODO implement LCD
 			squareWave(frequency, dutyCycle);
 			break;
 		case SINE:
@@ -151,7 +174,23 @@ void updateWave() {
 			break;
 	}
 }
+
+/**
+ * @fn void updateLCD()
+ * @brief updates LCD to match current mode/state
+ *
+ */
 void updateLCD() {
+	/**
+	 * @TODO Add LCD feature
+	 * The tricky part will be converting the float to a char array
+	 * Don't use sprintf/fprintf (no string.h)
+	 * COMMANDS:
+	 * lcdClearDisplay(void);
+	 * lcdSetCursor(line,col) @note is 0 or 1
+	 * lcdSendChar(uint8_t val)
+	 * lcdWriteString("HELLO")
+	 */
 	switch (currentMode) {
 		case SQUARE:
 			break;
@@ -164,15 +203,25 @@ void updateLCD() {
 	}
 
 }
+
+/**
+ * @fn void square(void)
+ * @brief square wave manager
+ * handles latch and writes to DAC
+ * @note sequence used for the square wave is as follows (assume start low):
+ * (TIM2 CCR1IF)->Enables latch->(square() clears latch and writes high)
+ * (TIM2    UIF)->Enables latch->(square() clears latch and writes low)
+ * This repeats indefinintely
+ */
 void square(void) {
 	switch (state) {
 		case HIGH:
-			DAC_latch_off();
-			DAC_write(V_LOW);
+			DAC_latch_off(); // Set LDAC high to disable latch
+			DAC_write(V_LOW); // Prepare low value in DAC
 			break;
 		case LOW:
-			DAC_latch_off();
-			DAC_write(V_HIGH);
+			DAC_latch_off(); // Set LDAC high to disable latch
+			DAC_write(V_HIGH); // Prepare high value in DAC
 			break;
 		case WAIT:
 			break;
@@ -180,13 +229,20 @@ void square(void) {
 			break;
 	}
 }
+
+/**
+ * @fn void TIM2_IRQHandler(void)
+ * @brief Interrupt handler for TIM2 (wave gen timer)
+ * Clears flags and latches DAC data (very precise timing)
+ * @note a switch case should be added to utilize this for other wave types
+ *
+ */
 void TIM2_IRQHandler(void) {
 	DAC_latch();
 	if (TIM2->SR & TIM_SR_CC1IF) {
 		TIM2->SR &= ~TIM_SR_CC1IF; // clear the cc1 interrupt flag
 		state = LOW;
 	}
-	//if (TIM2->SR & TIM_SR_UIF) {
 	else {
 		TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
 		state = HIGH;

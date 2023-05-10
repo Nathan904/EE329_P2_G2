@@ -10,6 +10,11 @@
 #define CLOCK_FREQUENCY SystemCoreClock
 #define PRESCALAR_1US_TICK (CLOCK_FREQUENCY/100000UL)
 
+/**
+ * @fn void setupTIM2()
+ * @brief old TIM2 function (ignore)
+ *
+ */
 void setupTIM2() {
 	RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN;
 	TIM2->DIER |= (TIM_DIER_UIE | TIM_DIER_CC1IE);
@@ -42,6 +47,15 @@ void initTIM2(uint32_t reloadCount, uint32_t ccr1Val) {
 
 }
 
+/**
+ * @fn void updateTIM2(uint32_t, uint32_t)
+ * @brief updates TIM2 CCR1 and ARR registers
+ * briefly disables timer to do this
+ * @note CNT must be reset or hardfault occurs if ARR is less than CNT
+ *
+ * @param reloadCount
+ * @param ccr1Val
+ */
 void updateTIM2(uint32_t reloadCount, uint32_t ccr1Val) {
 	TIM2->CR1 &= ~(TIM_CR1_CEN);
 	TIM2->CNT = 0UL;
