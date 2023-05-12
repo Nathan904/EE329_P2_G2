@@ -91,6 +91,12 @@ void ramp(void);
 void sine(void);
 void updateLCD(void);
 void updateWave(void);
+
+void squareWvScreen(int , float);
+void sineWvScreen(int);
+void rampWvScreen(int);
+void lcdWriteFreq(int);
+void lcdWriteDuty(float);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
