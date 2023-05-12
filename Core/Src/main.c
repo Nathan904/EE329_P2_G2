@@ -176,12 +176,14 @@ void checkUserInput(void) {
 void updateWave() {
 	switch (currentMode) {
 		case SQUARE:
-			//updateLCD(); @TODO implement LCD
+			updateLCD();
 			squareWave(frequency, dutyCycle);
 			break;
 		case SINE:
+			updateLCD();
 			break;
 		case RAMP:
+			updateLCD();
 			rampWave(frequency);
 			break;
 		default:
@@ -207,40 +209,18 @@ void updateLCD() {
 	 */
 	switch (currentMode) {
 		case SQUARE:
-			lcdClearDisplay();
-			lcdSetCursor(0,0);
-		
-			lcdWriteString("SQR ");
-			//borrowed this from lcd.c
-			putDwordDecimalValue(frequency);
-			lcdWriteString(" Hz  LAST");
-			lcdSetCursor(1,0);
-		
-			FLOAT_TO_PERCENT_CHAR(dutyCycle);
-			lcdWriteString(dutyCycleLCD);
-			lcdWriteString("% DUTY");
+			squareWvScreen(frequency, dutyCycle);
 			break;
 		case SINE:
-			lcdClearDisplay();
-			lcdSetCursor(0,0);
-		
-			lcdWriteString("SIN ");
-			putDwordDecimalValue(frequency);
-			lcdWriteString(" Hz  LAST");
-			lcdSetCursor(1,0);
+			sineWvScreen(frequency);
 			/**
-			*@TODO needs num of pts per cycle
+			*@TODO needs num of pts per cycle -> what's this for?
 			*putDwordDecimalValue(pointPerCycle);
 			*lcdWriteString(" PTS");
 			**/
 			break;
 		case RAMP:
-			lcdClearDisplay();
-			lcdSetCursor(0,0);
-			lcdWriteString("SAW ");
-			putDwordDecimalValue(frequency);
-			lcdWriteString(" Hz  LAST");
-			lcdSetCursor(1,0);
+			rampWvScreen(frequency);
 			/**
 			* @TODO implement ramp polarity on 0 button
 			*if (rampPolarity == 0){
@@ -259,7 +239,73 @@ void updateLCD() {
 	lcdSendChar(0x27);
 }
 
+void rampWvScreen(int freq){
+	lcdClearDisplay();
 
+	lcdSetCursor(0,0);
+	lcdWriteString("Ramp Wave! /|/|/");
+
+	lcdSetCursor(1,0);
+	lcdWriteFreq(freq);
+}
+
+void sineWvScreen(int freq){
+	lcdClearDisplay();
+
+	lcdSetCursor(0,0);
+	lcdWriteString("Sine Wave!<><><>");
+
+	lcdSetCursor(1,0);
+	lcdWriteFreq(freq);
+}
+
+
+void squareWvScreen(int freq, float duty){
+	lcdClearDisplay();
+
+	lcdSetCursor(0,0);
+	lcdWriteString("Sqr Wave! _|-|_|");
+
+	lcdSetCursor(1,0);
+	lcdWriteFreq(freq);
+
+	lcdSetCursor(1,8);
+	lcdWriteDuty(duty);
+}
+
+void lcdWriteFreq(int freq){
+	lcdWriteString("F=");
+	switch(freq){
+		case 100:
+			lcdWriteString("100Hz");
+			break;
+		case 200:
+			lcdWriteString("200Hz");
+			break;
+		case 300:
+			lcdWriteString("300Hz");
+			break;
+		case 400:
+			lcdWriteString("400Hz");
+			break;
+		case 500:
+			lcdWriteString("500Hz");
+			break;
+		default:
+			lcdWriteString("ERR");
+			break;
+	}
+}
+
+void lcdWriteDuty(float duty){
+	//float duty_as_percent = duty * 100;
+	lcdWriteString("DC=");
+	lcdSendChar(((int)duty / 10) + '0');
+	lcdSendChar(((int)duty % 10) + '0');
+	lcdSendChar('.');
+	lcdSendChar(((int)(duty*10))%10 + '0');
+	lcdSendChar('%');
+}
 
 /**
  * @fn void square(void)
