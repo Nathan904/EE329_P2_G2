@@ -15,9 +15,9 @@
 
 
 void rampWave(uint32_t frequency) {
-	//uint32_t reloadVal = 0xFFFF;
-	uint32_t reloadVal = ((TIM2_CLK_SPEED * 10)
-			/ (frequency * (RAMP_SIZE - 1)));
-	//updateTIM2(reloadVal);
+
+	uint32_t reloadVal = ((TIM2_CLK_SPEED * 100)
+			/ (frequency * (RAMP_SIZE - 20)));
+
 	initTIM2(reloadVal);
 }

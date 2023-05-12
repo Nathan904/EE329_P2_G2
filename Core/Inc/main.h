@@ -88,6 +88,7 @@ void Error_Handler(void);
 void checkUserInput(void);
 void square(void);
 void ramp(void);
+void sine(void);
 void updateLCD(void);
 void updateWave(void);
 /* USER CODE END Private defines */

@@ -13,6 +13,7 @@
 #include "keypad.h"
 #include "timer.h"
 #include "ramp.h"
+#include "sine.h"
 #define V_HIGH ((3000U) | 0x1000U)
 #define V_LOW 0x1000U
 #define FLOAT_TO_PERCENT_CHAR(f)\
@@ -88,6 +89,8 @@ int main(void)
 			case RAMP:
 				ramp();
 				break;
+			case SINE:
+				sine();
 			default:
 				break;
 		}
@@ -99,6 +102,12 @@ void ramp(void) {
 	DAC_latch_off(); // Set LDAC high to disable latch
 	rampIdx = (rampIdx > RAMP_SIZE) ? (0) : (rampIdx);
 	DAC_write((RAMP_DATA[rampIdx] | 0x1000U)); // Prepare high value in DAC
+
+}
+void sine(void) {
+	DAC_latch_off(); // Set LDAC high to disable latch
+	rampIdx = (rampIdx > SINE_SIZE) ? (0) : (rampIdx);
+	DAC_write((SINE_DATA[rampIdx] | 0x1000U)); // Prepare high value in DAC
 
 }
 
@@ -144,13 +153,13 @@ void checkUserInput(void) {
 			updateWave();
 			kpLast = kp;
 			break;
-		case 0xe:
+		case 0xa:
 			dutyCycle += 0.1f;
 			dutyCycle = (dutyCycle > 0.9f) ? (0.9f) : (dutyCycle);
 			updateWave();
 			kpLast = kp;
 			break;
-		case 0xf:
+		case 0xb:
 			// @TODO does anyone have a 4x4 keypad with working asterisk?
 			dutyCycle -= 0.1f;
 			dutyCycle = (dutyCycle < 0.1f) ? (0.1f) : (dutyCycle);
@@ -158,14 +167,20 @@ void checkUserInput(void) {
 			kpLast = kp;
 			break;
 		case 0x6:
-			currentMode = RAMP;
+			currentMode = SINE;
 			frequency = 100;
 			updateWave();
 			kpLast = kp;
 			break;
 		case 0x7:
+			currentMode = RAMP;
+			updateWave();
+			kpLast = kp;
 			break;
 		case 0x8:
+			currentMode = SQUARE;
+			updateWave();
+			kpLast = kp;
 			break;
 		case 0x9:
 			break;
@@ -180,6 +195,7 @@ void updateWave() {
 			squareWave(frequency, dutyCycle);
 			break;
 		case SINE:
+			sineWave(frequency);
 			break;
 		case RAMP:
 			rampWave(frequency);
