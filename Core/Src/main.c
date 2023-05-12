@@ -1,27 +1,18 @@
-/* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
+ *************************************************************************
   * @file           : main.c
   * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2023 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
+ *************************************************************************
+
   */
-/* Includes ------------------------------------------------------------------*/
+
 #include "main.h"
 #include "square.h"
 #include "mcp4821.h"
 #include "lcd.h"
 #include "keypad.h"
 #include "timer.h"
+#include "ramp.h"
 #define V_HIGH ((3000U) | 0x1000U)
 #define V_LOW 0x1000U
 #define FLOAT_TO_PERCENT_CHAR(f)\
@@ -30,7 +21,7 @@
 	dutyCycleLCD[0] = (val%10) + '0';
 
 
-/* Private function prototypes -----------------------------------------------*/
+
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 
@@ -61,7 +52,7 @@ typedef enum {
 Mode currentMode = SQUARE;
 uint16_t frequency = 100U;
 float dutyCycle = 0.5f;
-
+uint32_t rampIdx = 0;
 char dutyCycleLCD[2] = { 5 + '0', 0 + '0' };
 uint8_t kpLast = 0x10U;
 
@@ -94,11 +85,21 @@ int main(void)
 			case SQUARE:
 				square();
 				break;
+			case RAMP:
+				ramp();
+				break;
 			default:
 				break;
 		}
 		checkUserInput();
   }
+}
+
+void ramp(void) {
+	DAC_latch_off(); // Set LDAC high to disable latch
+	rampIdx = (rampIdx > RAMP_SIZE) ? (0) : (rampIdx);
+	DAC_write((RAMP_DATA[rampIdx] | 0x1000U)); // Prepare high value in DAC
+
 }
 
 /**
@@ -156,6 +157,18 @@ void checkUserInput(void) {
 			updateWave();
 			kpLast = kp;
 			break;
+		case 0x6:
+			currentMode = RAMP;
+			frequency = 100;
+			updateWave();
+			kpLast = kp;
+			break;
+		case 0x7:
+			break;
+		case 0x8:
+			break;
+		case 0x9:
+			break;
 		default:
 			break;
 	}
@@ -169,6 +182,7 @@ void updateWave() {
 		case SINE:
 			break;
 		case RAMP:
+			rampWave(frequency);
 			break;
 		default:
 			break;
@@ -239,16 +253,16 @@ void square(void) {
  */
 void TIM2_IRQHandler(void) {
 	DAC_latch();
-	if (TIM2->SR & TIM_SR_CC1IF) {
+	if(TIM2->SR & TIM_SR_UIF) {
+		TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
+		state = HIGH;
+		rampIdx++;
+	}
+	else //(TIM2->SR & TIM_SR_CC1IF)
+	{
 		TIM2->SR &= ~TIM_SR_CC1IF; // clear the cc1 interrupt flag
 		state = LOW;
 	}
-	else {
-		TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
-		state = HIGH;
-	}
-
-
 }
 
 

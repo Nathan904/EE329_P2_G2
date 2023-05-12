@@ -13,7 +13,7 @@
 
 uint32_t reloadVal; // Timer ARR value (based on desired frequency)
 
-#define TIM2_CLK_SPEED 100000UL // Clock speed [Hz] of TIM2 (0.1us/tick)
+
 
 /**
  * @fn void squareWave(uint32_t, float)
@@ -28,7 +28,7 @@ void squareWave(uint32_t frequency, float dutyCycle) {
 	reloadVal = (TIM2_CLK_SPEED / frequency);
 	uint32_t captureVal = getDutyCycle(dutyCycle);
 
-	updateTIM2(reloadVal, captureVal);
+	updateSquareTIM2(reloadVal, captureVal);
 
 }
 
