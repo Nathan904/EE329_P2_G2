@@ -207,16 +207,59 @@ void updateLCD() {
 	 */
 	switch (currentMode) {
 		case SQUARE:
+			lcdClearDisplay();
+			lcdSetCursor(0,0);
+		
+			lcdWriteString("SQR ");
+			//borrowed this from lcd.c
+			putDwordDecimalValue(frequency);
+			lcdWriteString(" Hz  LAST");
+			lcdSetCursor(1,0);
+		
+			FLOAT_TO_PERCENT_CHAR(dutyCycle);
+			lcdWriteString(dutyCycleLCD);
+			lcdWriteString("% DUTY");
 			break;
 		case SINE:
+			lcdClearDisplay();
+			lcdSetCursor(0,0);
+		
+			lcdWriteString("SIN ");
+			putDwordDecimalValue(frequency);
+			lcdWriteString(" Hz  LAST");
+			lcdSetCursor(1,0);
+			/**
+			*@TODO needs num of pts per cycle
+			*putDwordDecimalValue(pointPerCycle);
+			*lcdWriteString(" PTS");
+			**/
 			break;
 		case RAMP:
+			lcdClearDisplay();
+			lcdSetCursor(0,0);
+			lcdWriteString("SAW ");
+			putDwordDecimalValue(frequency);
+			lcdWriteString(" Hz  LAST");
+			lcdSetCursor(1,0);
+			/**
+			* @TODO implement ramp polarity on 0 button
+			*if (rampPolarity == 0){
+			*	lcdWriteString("NEGATIVE");
+			*} else {
+			*	lcdWriteString("POSITIVE");
+			*}
+			**/
 			break;
 		default:
 			break;
 	}
-
+	lcdSetCursor(1, 13);
+	lcdSendChar(0x27); //sends ' char
+	lcdSendChar(kpLast);
+	lcdSendChar(0x27);
 }
+
+
 
 /**
  * @fn void square(void)
