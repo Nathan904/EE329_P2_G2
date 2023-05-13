@@ -363,7 +363,25 @@ void square(void) {
  */
 void TIM2_IRQHandler(void) {
 	DAC_latch();
-	if(TIM2->SR & TIM_SR_UIF) {
+	switch (currentMode) {
+		case SQUARE:
+			if (TIM2->SR & TIM_SR_UIF) {
+				TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
+				state = HIGH;
+				rampIdx++;
+			}
+			else //(TIM2->SR & TIM_SR_CC1IF)
+			{
+				TIM2->SR &= ~TIM_SR_CC1IF; // clear the cc1 interrupt flag
+				state = LOW;
+			}
+			break;
+		default:
+			TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
+				rampIdx++;
+			break;
+	}
+	/*if(TIM2->SR & TIM_SR_UIF) {
 		TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
 		state = HIGH;
 		rampIdx++;
@@ -372,7 +390,7 @@ void TIM2_IRQHandler(void) {
 	{
 		TIM2->SR &= ~TIM_SR_CC1IF; // clear the cc1 interrupt flag
 		state = LOW;
-	}
+	 }*/
 }
 
 
