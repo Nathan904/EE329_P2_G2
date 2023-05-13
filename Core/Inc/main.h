@@ -88,6 +88,7 @@ void Error_Handler(void);
 void checkUserInput(void);
 void square(void);
 void ramp(void);
+void sine(void);
 void updateLCD(void);
 void updateWave(void);
 
@@ -96,6 +97,8 @@ void sineWvScreen(int);
 void rampWvScreen(int);
 void lcdWriteFreq(int);
 void lcdWriteDuty(float);
+void lcdWritePTS(uint8_t);
+void lcdWriteKey(uint8_t);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
