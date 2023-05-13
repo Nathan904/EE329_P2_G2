@@ -14,8 +14,9 @@
 
 void sineWave(uint32_t frequency) {
 	//uint32_t reloadVal = 0xFFFF;
-	uint32_t reloadVal = ((TIM2_CLK_SPEED * 10)
-			/ (frequency * (SINE_SIZE - 1)));
+	/*	float _t = ((float) frequency) * 0.99;
+	 frequency = (uint32_t) _t;*/
+	uint32_t reloadVal = (SystemCoreClock) / (SINE_SIZE * frequency);
 	//updateTIM2(reloadVal);
 	initTIM2(reloadVal);
 }

@@ -10,6 +10,7 @@
 
 #include "stm32l4xx_hal.h"
 #define TIM2_CLK_SPEED 100000UL // Clock speed [Hz] of TIM2 (0.1us/tick)
+#define RAMP_PSC SystemCoreClock/100000UL
 
 void initTIM3(void);
 void initTIM4(uint32_t reloadValue);

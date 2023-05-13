@@ -91,6 +91,7 @@ int main(void)
 				break;
 			case SINE:
 				sine();
+				break;
 			default:
 				break;
 		}
@@ -100,15 +101,14 @@ int main(void)
 
 void ramp(void) {
 	DAC_latch_off(); // Set LDAC high to disable latch
-	rampIdx = (rampIdx > RAMP_SIZE) ? (0) : (rampIdx);
+	rampIdx = (rampIdx >= RAMP_SIZE) ? (0) : (rampIdx);
 	DAC_write((RAMP_DATA[rampIdx] | 0x1000U)); // Prepare high value in DAC
 
 }
 void sine(void) {
 	DAC_latch_off(); // Set LDAC high to disable latch
-	rampIdx = (rampIdx > SINE_SIZE) ? (0) : (rampIdx);
+	rampIdx = (rampIdx >= SINE_SIZE) ? (0) : (rampIdx);
 	DAC_write((SINE_DATA[rampIdx] | 0x1000U)); // Prepare high value in DAC
-
 }
 
 /**
@@ -160,7 +160,6 @@ void checkUserInput(void) {
 			kpLast = kp;
 			break;
 		case 0xb:
-			// @TODO does anyone have a 4x4 keypad with working asterisk?
 			dutyCycle -= 0.1f;
 			dutyCycle = (dutyCycle < 0.1f) ? (0.1f) : (dutyCycle);
 			updateWave();
@@ -313,6 +312,12 @@ void lcdWriteFreq(int freq){
 	}
 }
 
+/**
+ * @fn void lcdWriteDuty(float)
+ * @brief
+ *
+ * @param duty
+ */
 void lcdWriteDuty(float duty){
 	//float duty_as_percent = duty * 100;
 	lcdWriteString("DC=");

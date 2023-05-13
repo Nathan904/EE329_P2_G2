@@ -9,7 +9,7 @@
 
 #define CLOCK_FREQUENCY SystemCoreClock
 #define PRESCALAR_1US_TICK (CLOCK_FREQUENCY/100000UL)
-#define PRESCALAR_RAMP PRESCALAR_1US_TICK/100
+#define PRESCALAR_RAMP PRESCALAR_1US_TICK
 
 /**
  * @fn void setupTIM2()
@@ -72,7 +72,7 @@ void initTIM2(uint32_t reloadCount) {
 	TIM2->DIER &= ~(TIM_DIER_CC1IE);
 	TIM2->DIER |= (TIM_DIER_UIE);
 	TIM2->CNT = 0U;
-	TIM2->PSC = PRESCALAR_RAMP - 1; // prescaler value
+	TIM2->PSC = 0; // prescaler value
 	TIM2->CR1 &= ~(0x3U << TIM_CR1_CKD_Pos);
 	TIM2->ARR = reloadCount - 1; // reload value
 	TIM2->SR &= ~(TIM_SR_UIF | TIM_SR_CC1IF);
