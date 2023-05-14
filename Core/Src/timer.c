@@ -74,7 +74,7 @@ void initTIM2(uint32_t reloadCount) {
 	TIM2->CNT = 0U;
 	TIM2->PSC = 0; // prescaler value
 	TIM2->CR1 &= ~(0x3U << TIM_CR1_CKD_Pos);
-	TIM2->ARR = reloadCount; // reload value
+	TIM2->ARR = reloadCount - 1; // reload value
 	TIM2->SR &= ~(TIM_SR_UIF | TIM_SR_CC1IF);
 	NVIC_EnableIRQ(TIM2_IRQn);
 	__enable_irq();

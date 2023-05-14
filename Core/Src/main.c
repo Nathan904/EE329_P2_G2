@@ -185,7 +185,7 @@ void sine(void) {
 	// Reset idx to beginning of array if it has sent final value
 	idx = (idx >= (((SINE_SIZE) / (freq + 1)))) ? (0) : (idx);
 	if (latch) {
-	DAC_write(sineArrays[freq][idx]); // Prepare high value in DAC
+		DAC_write(sineArrays[freq][idx]); // Prepare high value in DAC
 		latch = 0;
 	}
 }
