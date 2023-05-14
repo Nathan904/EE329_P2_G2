@@ -71,6 +71,7 @@ uint32_t idx = 0; // Global index for ramp/sine arrays
 char dutyCycleLCD[2] = { 5 + '0', 0 + '0' }; // char array for duty cycle
 uint8_t kpLast = 0x0U; // Global last keypad button pressed
 uint16_t **sineArrays; // 2d sine array global pointer
+uint8_t numPts = 0;
 
 /**
   * @brief  The application entry point.
@@ -304,20 +305,30 @@ void rampWvScreen(int freq){
 	lcdClearDisplay();
 
 	lcdSetCursor(0,0);
-	lcdWriteString("Ramp Wave! /|/|/");
-
-	lcdSetCursor(1,0);
+	lcdWriteString("SAW ");
 	lcdWriteFreq(freq);
+	lcdWriteString("  LAST");
+
+//	lcdSetCursor(1,0);
+//	lcdWritePTS(numPts);
+
+	lcdSetCursor(1,13);
+	lcdWriteKey(kpLast);
 }
 
 void sineWvScreen(int freq){
 	lcdClearDisplay();
 
 	lcdSetCursor(0,0);
-	lcdWriteString("Sine Wave!<><><>");
+	lcdWriteString("SIN ");
+	lcdWriteFreq(freq);
+	lcdWriteString("  LAST");
 
 	lcdSetCursor(1,0);
-	lcdWriteFreq(freq);
+	lcdWritePTS(numPts);
+
+	lcdSetCursor(1,13);
+	lcdWriteKey(kpLast);
 }
 
 
@@ -325,32 +336,35 @@ void squareWvScreen(int freq, float duty){
 	lcdClearDisplay();
 
 	lcdSetCursor(0,0);
-	lcdWriteString("Sqr Wave! _|-|_|");
+	lcdWriteString("SQU ");
+	lcdWriteFreq(freq);
+	lcdWriteString("  LAST");
 
 	lcdSetCursor(1,0);
-	lcdWriteFreq(freq);
-
-	lcdSetCursor(1,8);
 	lcdWriteDuty(duty);
+
+	lcdSetCursor(1,13);
+	lcdWriteKey(kpLast);
 }
+
 
 void lcdWriteFreq(int freq){
 	lcdWriteString("F=");
 	switch(freq){
 		case 100:
-			lcdWriteString("100Hz");
+			lcdWriteString("100 Hz");
 			break;
 		case 200:
-			lcdWriteString("200Hz");
+			lcdWriteString("200 Hz");
 			break;
 		case 300:
-			lcdWriteString("300Hz");
+			lcdWriteString("300 Hz");
 			break;
 		case 400:
-			lcdWriteString("400Hz");
+			lcdWriteString("400 Hz");
 			break;
 		case 500:
-			lcdWriteString("500Hz");
+			lcdWriteString("500 Hz");
 			break;
 		default:
 			lcdWriteString("ERR");
@@ -365,13 +379,30 @@ void lcdWriteFreq(int freq){
  * @param duty
  */
 void lcdWriteDuty(float duty){
-	//float duty_as_percent = duty * 100;
-	lcdWriteString("DC=");
 	lcdSendChar(((int)duty / 10) + '0');
 	lcdSendChar(((int)duty % 10) + '0');
 	lcdSendChar('.');
 	lcdSendChar(((int)(duty*10))%10 + '0');
 	lcdSendChar('%');
+	lcdWriteString(" Duty");
+}
+
+void lcdWriteKey(uint8_t key){
+	lcdSendChar('\'');
+
+	if(kpLast<0x9){
+		lcdSendChar(key + '0');
+	}
+	else{
+		lcdSendChar(key+0x37);	//if one of the letters is pressed offset to proper spot in ascii table
+	}
+
+	lcdSendChar('\'');
+}
+
+void lcdWritePTS(uint8_t points){
+	lcdWriteString(points + '0');
+	lcdWiteString(" PTS");
 }
 
 /**
