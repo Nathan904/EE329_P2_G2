@@ -30,10 +30,8 @@ void rampWave(uint16_t frequency) {
 			reloadVal -= 1;
 			break;
 		case 300:
-			reloadVal -= 1;
 			break;
 		case 400:
-			reloadVal -= 1;
 			break;
 		case 500:
 			break;
