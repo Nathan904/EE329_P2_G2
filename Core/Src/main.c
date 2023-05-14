@@ -402,7 +402,7 @@ void lcdWriteKey(uint8_t key){
 
 void lcdWritePTS(uint8_t points){
 	lcdWriteString(points + '0');
-	lcdWiteString(" PTS");
+	lcdWriteString(" PTS");
 }
 
 /**
