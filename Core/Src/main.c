@@ -14,15 +14,12 @@
 #include "timer.h"
 #include "ramp.h"
 #include "sine.h"
-#define V_HIGH ((3000U) | 0x1000U)
-#define V_LOW 0x1000U
-#define FLOAT_TO_PERCENT_CHAR(f)\
-	uint8_t val=(uint8_t)(f*100); \
-	dutyCycleLCD[1] = ((val/10)) + '0';\
-	dutyCycleLCD[0] = (val%10) + '0';
 
 
+#define V_HIGH ((2910U) | 0x1000U) // Square wave high DAC_write value
+#define V_LOW 0x1000U // Square wave low DAC_write value
 
+// System config functions (ide pre-generated)
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 
@@ -38,6 +35,7 @@ typedef enum {
 } State;
 State state = LOW;
 
+
 /**
  * @enum MODE
  * @brief enumeration for the output wave type
@@ -49,13 +47,30 @@ typedef enum {
 	RAMP /**< RAMP */
 } Mode;
 
+/**
+ * @enum Freq
+ * @brief enumeration of frequencies to use for 2d array
+ * e.g. for 100 Hz: (ONE = 0) --> first column vector in array is used
+ *
+ */
+typedef enum {
+	ONE, /**< ONE HUNDRED*/
+	TWO, /**< TWO HUNDRED*/
+	THREE,/**< THREE HUNDRED*/
+	FOUR, /**< FOUR HUNDRED*/
+	FIVE /**< FIVE HUNDRED*/
+} Freq;
+Freq freq = ONE; // Initialize with default frequency
+
 // Initialize default mode (100 Hz square wave 50% duty)
 Mode currentMode = SQUARE;
-uint16_t frequency = 100U;
-float dutyCycle = 0.5f;
-uint32_t rampIdx = 0;
-char dutyCycleLCD[2] = { 5 + '0', 0 + '0' };
-uint8_t kpLast = 0x10U;
+
+uint16_t frequency = 100U; // global frequency
+float dutyCycle = 0.5f; // fp duty cycle 0<=dutyCycle<=1
+uint32_t idx = 0; // Global index for ramp/sine arrays
+char dutyCycleLCD[2] = { 5 + '0', 0 + '0' }; // char array for duty cycle
+uint8_t kpLast = 0x0U; // Global last keypad button pressed
+uint16_t **sineArrays; // 2d sine array global pointer
 
 /**
   * @brief  The application entry point.
@@ -70,18 +85,25 @@ int main(void)
 
 
   MX_GPIO_Init();
-	lcdInit();
-	lcdWriteString("HELLO");
-	DAC_init();
-	setupKeypad();
-	setupTIM2();
+
+	/* Create smaller versions of SINE_DATA */
+	sineArrays = createSmallArrays(SINE_DATA);
+
+	lcdInit(); // initialize LCD
+	updateLCD(); // add initial LCD text
+	DAC_init(); // init SPI1 and DAC
+	setupKeypad(); // init keypad
+	setupTIM2(); // initial setup for TIM2
+
+	// start program at 100 Hz 50% duty cycle square wave
 	squareWave(frequency, dutyCycle);
-
-
-	updateLCD();
 
   while (1)
   {
+		/**
+		 * @brief
+		 * Switch calls corresponding function for each mode
+		 */
 		switch (currentMode) {
 			case SQUARE:
 				square();
@@ -95,27 +117,30 @@ int main(void)
 			default:
 				break;
 		}
+
+		// Check Keypad for user input
 		checkUserInput();
   }
 }
 
 void ramp(void) {
 	DAC_latch_off(); // Set LDAC high to disable latch
-	rampIdx = (rampIdx >= RAMP_SIZE) ? (0) : (rampIdx);
-	DAC_write((RAMP_DATA[rampIdx] | 0x1000U)); // Prepare high value in DAC
+	idx = (idx >= RAMP_SIZE) ? (0) : (idx); // Reset in
+	DAC_write((RAMP_DATA[idx] | 0x1000U)); // Prepare high value in DAC
 
 }
 void sine(void) {
-	DAC_latch_off(); // Set LDAC high to disable latch
-	rampIdx = (rampIdx >= SINE_SIZE) ? (0) : (rampIdx);
-	DAC_write((SINE_DATA[rampIdx] | 0x1000U)); // Prepare high value in DAC
+
+	// Reset idx to beginning of array if it has sent final value
+	idx = (idx >= (((SINE_SIZE) / (freq + 1)))) ? (0) : (idx);
+
+	DAC_write(sineArrays[freq][idx]); // Prepare high value in DAC
 }
 
 /**
  * @fn void checkUserInput(void)
  * @brief keypad user input handler
  * switch with case for each possible user input
- * @todo add the rest
  *
  */
 void checkUserInput(void) {
@@ -124,64 +149,85 @@ void checkUserInput(void) {
 		case 0x10:
 			break;
 		case 0x1:
+			kpLast = kp;
+			freq = ONE;
 			frequency = 100U;
 			updateWave();
-			kpLast = kp;
 			break;
 		case 0x2:
+			kpLast = kp;
+			freq = TWO;
 			frequency = 200U;
 			updateWave();
-			kpLast = kp;
 			break;
 		case 0x3:
+			kpLast = kp;
+			freq = THREE;
 			frequency = 300U;
 			updateWave();
-			kpLast = kp;
 			break;
 		case 0x4:
+			kpLast = kp;
+			freq = FOUR;
 			frequency = 400U;
 			updateWave();
-			kpLast = kp;
 			break;
 		case 0x5:
+			kpLast = kp;
+			freq = FIVE;
 			frequency = 500U;
 			updateWave();
-			kpLast = kp;
 			break;
 		case 0x0:
-			dutyCycle = 0.5f;
-			updateWave();
-			kpLast = kp;
+			///Set Duty cycle if using square wave output
+			if (currentMode == SQUARE) {
+				kpLast = kp;
+				dutyCycle = 0.5f;
+				updateWave();
+			}
 			break;
 		case 0xa:
-			dutyCycle += 0.1f;
-			dutyCycle = (dutyCycle > 0.9f) ? (0.9f) : (dutyCycle);
-			updateWave();
-			kpLast = kp;
+			///Set Duty cycle if using square wave output
+			if (currentMode == SQUARE) {
+				kpLast = kp;
+				dutyCycle += 0.1f;
+				dutyCycle = (dutyCycle > 0.9f) ? (0.9f) : (dutyCycle);
+				updateWave();
+			}
 			break;
 		case 0xb:
-			dutyCycle -= 0.1f;
-			dutyCycle = (dutyCycle < 0.1f) ? (0.1f) : (dutyCycle);
-			updateWave();
-			kpLast = kp;
+			///Set Duty cycle if using square wave output
+			if (currentMode == SQUARE) {
+				kpLast = kp;
+				dutyCycle -= 0.1f;
+				dutyCycle = (dutyCycle < 0.1f) ? (0.1f) : (dutyCycle);
+				updateWave();
+				kpLast = kp;
+			}
 			break;
 		case 0x6:
+			kpLast = kp;
 			currentMode = SINE;
+			freq = ONE;
 			frequency = 100;
 			updateWave();
-			kpLast = kp;
 			break;
 		case 0x7:
+			kpLast = kp;
 			currentMode = RAMP;
 			updateWave();
-			kpLast = kp;
 			break;
 		case 0x8:
+			kpLast = kp;
 			currentMode = SQUARE;
 			updateWave();
-			kpLast = kp;
 			break;
 		case 0x9:
+			kpLast = kp;
+			currentMode = SQUARE;
+			frequency = 100;
+			dutyCycle = 0.5f;
+			updateWave();
 			break;
 		default:
 			break;
@@ -190,14 +236,17 @@ void checkUserInput(void) {
 void updateWave() {
 	switch (currentMode) {
 		case SQUARE:
+			stopTIM2();
 			updateLCD();
 			squareWave(frequency, dutyCycle);
 			break;
 		case SINE:
+			stopTIM2();
 			updateLCD();
 			sineWave(frequency);
 			break;
 		case RAMP:
+			stopTIM2();
 			updateLCD();
 			rampWave(frequency);
 			break;
@@ -212,13 +261,10 @@ void updateWave() {
  *
  */
 void updateLCD() {
-	/**
-	 * @TODO Add LCD feature
-	 * The tricky part will be converting the float to a char array
-	 * Don't use sprintf/fprintf (no string.h)
-	 * COMMANDS:
+	/**@brief
+	 * LCD COMMANDS:
 	 * lcdClearDisplay(void);
-	 * lcdSetCursor(line,col) @note is 0 or 1
+	 * lcdSetCursor(line,col) @note line is 0 or 1
 	 * lcdSendChar(uint8_t val)
 	 * lcdWriteString("HELLO")
 	 */
@@ -250,7 +296,7 @@ void updateLCD() {
 	}
 	lcdSetCursor(1, 13);
 	lcdSendChar(0x27); //sends ' char
-	lcdSendChar(kpLast);
+	lcdSendChar(kpLast + '0');
 	lcdSendChar(0x27);
 }
 
@@ -368,7 +414,7 @@ void TIM2_IRQHandler(void) {
 			if (TIM2->SR & TIM_SR_UIF) {
 				TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
 				state = HIGH;
-				rampIdx++;
+				idx++;
 			}
 			else //(TIM2->SR & TIM_SR_CC1IF)
 			{
@@ -378,13 +424,13 @@ void TIM2_IRQHandler(void) {
 			break;
 		default:
 			TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
-				rampIdx++;
+			idx++;
 			break;
 	}
 	/*if(TIM2->SR & TIM_SR_UIF) {
 		TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
 		state = HIGH;
-		rampIdx++;
+	 idx++;
 	}
 	else //(TIM2->SR & TIM_SR_CC1IF)
 	{

@@ -19,6 +19,6 @@ void initTIM2(uint32_t reloadCount);
 void updateTIM2(uint32_t reloadCount);
 void initSquareTIM2(uint32_t reloadCount, uint32_t ccr1Val);
 void updateSquareTIM2(uint32_t reloadCount, uint32_t ccr1Val);
-void setupTIM2();
-
+void setupTIM2(void);
+void stopTIM2(void);
 #endif /* INC_TIMER_H_ */
