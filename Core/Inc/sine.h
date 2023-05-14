@@ -15,7 +15,7 @@
 #define FREQUENCY_COUNT 5 // Number of frequencies
 void sineWave(uint32_t frequency);
 void setupSineData(void);
-uint16_t** createSmallArrays(uint16_t *sineData);
+uint16_t** createSmallArrays(const uint16_t *sineData);
 
 // Data for sine function
 static const uint16_t SINE_DATA[SINE_SIZE] = { 0x15b4, 0x15b8, 0x15bd,

@@ -20,6 +20,7 @@
  */
 void sineWave(uint32_t frequency) {
 	uint32_t reloadVal = (SystemCoreClock) / (SINE_SIZE * 100);
+	reloadVal = (frequency == 500) ? (reloadVal - 1) : (reloadVal);
 	initTIM2(reloadVal);
 }
 
@@ -29,7 +30,7 @@ void sineWave(uint32_t frequency) {
  * @param sineData : Original SINE_DATA array (max samples @ fmin)
  * @return uint16_t
  */
-uint16_t** createSmallArrays(uint16_t *sineData) {
+uint16_t** createSmallArrays(const uint16_t *sineData) {
 	/**
 	 * @brief Allocate memory for arrays
 	 * The number of small arrays is equal to FREQUENCY_COUNT + 1

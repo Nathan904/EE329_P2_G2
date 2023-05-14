@@ -1,10 +1,10 @@
 /**
- *************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
- *************************************************************************
+ ***************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ***************************************************************************
 
-  */
+ */
 
 #include "main.h"
 #include "square.h"
@@ -14,14 +14,17 @@
 #include "timer.h"
 #include "ramp.h"
 #include "sine.h"
-
-
+#include <stdlib.h>
 #define V_HIGH ((2910U) | 0x1000U) // Square wave high DAC_write value
 #define V_LOW 0x1000U // Square wave low DAC_write value
 
 // System config functions (ide pre-generated)
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
+
+/***************************************************************************
+ * Begin Global Variables
+ ***************************************************************************
+ **/
 
 /**
  * @enum State
@@ -29,12 +32,11 @@ static void MX_GPIO_Init(void);
  *
  */
 typedef enum {
-	LOW, /**< LOW */
-	HIGH,/**< HIGH */
-	WAIT /**< WAIT */
+	LOW, /**< LOW *//**< LOW */
+	HIGH,/**< HIGH *//**< HIGH */
+	WAIT /**< WAIT *//**< WAIT */
 } State;
 State state = LOW;
-
 
 /**
  * @enum MODE
@@ -60,6 +62,7 @@ typedef enum {
 	FOUR, /**< FOUR HUNDRED*/
 	FIVE /**< FIVE HUNDRED*/
 } Freq;
+
 Freq freq = ONE; // Initialize with default frequency
 
 // Initialize default mode (100 Hz square wave 50% duty)
@@ -71,24 +74,27 @@ uint32_t idx = 0; // Global index for ramp/sine arrays
 char dutyCycleLCD[2] = { 5 + '0', 0 + '0' }; // char array for duty cycle
 uint8_t kpLast = 0x0U; // Global last keypad button pressed
 uint16_t **sineArrays; // 2d sine array global pointer
+uint16_t *rampArray;
 uint8_t numPts = 0;
+uint8_t latch = 0;
+Polarity polarity = POSITIVE;
+/***************************************************************************
+ * End Global Variables
+ ***************************************************************************
+ **/
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
-  HAL_Init();
+ * @brief  The application entry point.
+ * @retval int
+ */
+int main(void) {
+	//Pregenerated init functions
+	HAL_Init();
+	SystemClock_Config();
 
-
-  SystemClock_Config();
-
-
-  MX_GPIO_Init();
-
-	/* Create smaller versions of SINE_DATA */
+	/* Create arrays for sine/ramp functions */
 	sineArrays = createSmallArrays(SINE_DATA);
+	rampArray = createRampArray(frequency, polarity);
 
 	lcdInit(); // initialize LCD
 	updateLCD(); // add initial LCD text
@@ -99,8 +105,8 @@ int main(void)
 	// start program at 100 Hz 50% duty cycle square wave
 	squareWave(frequency, dutyCycle);
 
-  while (1)
-  {
+	while (1)
+	{
 		/**
 		 * @brief
 		 * Switch calls corresponding function for each mode
@@ -121,22 +127,73 @@ int main(void)
 
 		// Check Keypad for user input
 		checkUserInput();
-  }
+	}
 }
 
+/***************************************************************************
+ * DAC_write functions
+ ***************************************************************************
+ */
+
+/**
+ * @fn void square(void)
+ * @brief square wave manager
+ * handles latch and writes to DAC
+ * @note sequence used for the square wave is as follows (assume start low):
+ * (TIM2 CCR1IF)->Enables latch->(square() clears latch and writes high)
+ * (TIM2    UIF)->Enables latch->(square() clears latch and writes low)
+ * This repeats indefinintely
+ */
+void square(void) {
+	switch (state) {
+		case HIGH:
+			DAC_latch_off(); // Set LDAC high to disable latch
+			DAC_write(V_LOW); // Prepare low value in DAC
+			break;
+		case LOW:
+			DAC_latch_off(); // Set LDAC high to disable latch
+			DAC_write(V_HIGH); // Prepare high value in DAC
+			break;
+		case WAIT:
+			break;
+		default:
+			break;
+	}
+}
+
+/**
+ * @fn void ramp(void)
+ * @brief disables latch and writes next ramp value to DAC
+ *
+ */
 void ramp(void) {
-	DAC_latch_off(); // Set LDAC high to disable latch
-	idx = (idx >= RAMP_SIZE) ? (0) : (idx); // Reset in
-	DAC_write((RAMP_DATA[idx] | 0x1000U)); // Prepare high value in DAC
+	//DAC_latch_off(); // Set LDAC high to disable latch
+	// Reset idx to beginning of array if it has sent final value
+	idx = (idx >= rampSize) ? (0) : (idx);
+
+	DAC_write(rampArray[idx]); // Prepare high value in DAC
 
 }
+
+/**
+ * @fn void sine(void)
+ * @brief disables latch and writes next sine value to DAC
+ *
+ */
 void sine(void) {
 
 	// Reset idx to beginning of array if it has sent final value
 	idx = (idx >= (((SINE_SIZE) / (freq + 1)))) ? (0) : (idx);
-
+	if (latch) {
 	DAC_write(sineArrays[freq][idx]); // Prepare high value in DAC
+		latch = 0;
+	}
 }
+
+/***************************************************************************
+ * User interface functions
+ ***************************************************************************
+ */
 
 /**
  * @fn void checkUserInput(void)
@@ -184,6 +241,11 @@ void checkUserInput(void) {
 			if (currentMode == SQUARE) {
 				kpLast = kp;
 				dutyCycle = 0.5f;
+				updateWave();
+			}
+			else if (currentMode == RAMP) {
+				polarity = 1 - polarity;
+				kpLast = kp;
 				updateWave();
 			}
 			break;
@@ -234,28 +296,6 @@ void checkUserInput(void) {
 			break;
 	}
 }
-void updateWave() {
-	switch (currentMode) {
-		case SQUARE:
-			stopTIM2();
-			updateLCD();
-			squareWave(frequency, dutyCycle);
-			break;
-		case SINE:
-			stopTIM2();
-			updateLCD();
-			sineWave(frequency);
-			break;
-		case RAMP:
-			stopTIM2();
-			updateLCD();
-			rampWave(frequency);
-			break;
-		default:
-			break;
-	}
-}
-
 /**
  * @fn void updateLCD()
  * @brief updates LCD to match current mode/state
@@ -276,21 +316,21 @@ void updateLCD() {
 		case SINE:
 			sineWvScreen(frequency);
 			/**
-			*@TODO needs num of pts per cycle -> what's this for?
-			*putDwordDecimalValue(pointPerCycle);
-			*lcdWriteString(" PTS");
-			**/
+			 *@TODO needs num of pts per cycle -> what's this for?
+			 *putDwordDecimalValue(pointPerCycle);
+			 *lcdWriteString(" PTS");
+			 **/
 			break;
 		case RAMP:
 			rampWvScreen(frequency);
 			/**
-			* @TODO implement ramp polarity on 0 button
-			*if (rampPolarity == 0){
-			*	lcdWriteString("NEGATIVE");
-			*} else {
-			*	lcdWriteString("POSITIVE");
-			*}
-			**/
+			 * @TODO implement ramp polarity on 0 button
+			 *if (rampPolarity == 0){
+			 *	lcdWriteString("NEGATIVE");
+			 *} else {
+			 *	lcdWriteString("POSITIVE");
+			 *}
+			 **/
 			break;
 		default:
 			break;
@@ -301,10 +341,10 @@ void updateLCD() {
 	lcdSendChar(0x27);
 }
 
-void rampWvScreen(int freq){
+void rampWvScreen(int freq) {
 	lcdClearDisplay();
 
-	lcdSetCursor(0,0);
+	lcdSetCursor(0, 0);
 	lcdWriteString("SAW ");
 	lcdWriteFreq(freq);
 	lcdWriteString("  LAST");
@@ -312,45 +352,43 @@ void rampWvScreen(int freq){
 //	lcdSetCursor(1,0);
 //	lcdWritePTS(numPts);
 
-	lcdSetCursor(1,13);
+	lcdSetCursor(1, 13);
 	lcdWriteKey(kpLast);
 }
 
-void sineWvScreen(int freq){
+void sineWvScreen(int freq) {
 	lcdClearDisplay();
 
-	lcdSetCursor(0,0);
+	lcdSetCursor(0, 0);
 	lcdWriteString("SIN ");
 	lcdWriteFreq(freq);
 	lcdWriteString("  LAST");
 
-	lcdSetCursor(1,0);
+	lcdSetCursor(1, 0);
 	lcdWritePTS(numPts);
 
-	lcdSetCursor(1,13);
+	lcdSetCursor(1, 13);
 	lcdWriteKey(kpLast);
 }
 
-
-void squareWvScreen(int freq, float duty){
+void squareWvScreen(int freq, float duty) {
 	lcdClearDisplay();
 
-	lcdSetCursor(0,0);
+	lcdSetCursor(0, 0);
 	lcdWriteString("SQU ");
 	lcdWriteFreq(freq);
 	lcdWriteString("  LAST");
 
-	lcdSetCursor(1,0);
+	lcdSetCursor(1, 0);
 	lcdWriteDuty(duty);
 
-	lcdSetCursor(1,13);
+	lcdSetCursor(1, 13);
 	lcdWriteKey(kpLast);
 }
 
-
-void lcdWriteFreq(int freq){
+void lcdWriteFreq(int freq) {
 	lcdWriteString("F=");
-	switch(freq){
+	switch (freq) {
 		case 100:
 			lcdWriteString("100 Hz");
 			break;
@@ -378,53 +416,62 @@ void lcdWriteFreq(int freq){
  *
  * @param duty
  */
-void lcdWriteDuty(float duty){
-	lcdSendChar(((int)duty / 10) + '0');
-	lcdSendChar(((int)duty % 10) + '0');
+void lcdWriteDuty(float duty) {
+	lcdSendChar(((int) duty / 10) + '0');
+	lcdSendChar(((int) duty % 10) + '0');
 	lcdSendChar('.');
-	lcdSendChar(((int)(duty*10))%10 + '0');
+	lcdSendChar(((int) (duty * 10)) % 10 + '0');
 	lcdSendChar('%');
 	lcdWriteString(" Duty");
 }
 
-void lcdWriteKey(uint8_t key){
+void lcdWriteKey(uint8_t key) {
 	lcdSendChar('\'');
 
-	if(kpLast<0x9){
+	if (kpLast < 0x9) {
 		lcdSendChar(key + '0');
 	}
-	else{
-		lcdSendChar(key+0x37);	//if one of the letters is pressed offset to proper spot in ascii table
+	else {
+		lcdSendChar(key + 0x37); //if one of the letters is pressed offset to proper spot in ascii table
 	}
 
 	lcdSendChar('\'');
 }
 
-void lcdWritePTS(uint8_t points){
+void lcdWritePTS(uint8_t points) {
 	lcdWriteString(points + '0');
 	lcdWriteString(" PTS");
 }
 
-/**
- * @fn void square(void)
- * @brief square wave manager
- * handles latch and writes to DAC
- * @note sequence used for the square wave is as follows (assume start low):
- * (TIM2 CCR1IF)->Enables latch->(square() clears latch and writes high)
- * (TIM2    UIF)->Enables latch->(square() clears latch and writes low)
- * This repeats indefinintely
+/***************************************************************************
+ * Timing functions
+ ***************************************************************************
  */
-void square(void) {
-	switch (state) {
-		case HIGH:
-			DAC_latch_off(); // Set LDAC high to disable latch
-			DAC_write(V_LOW); // Prepare low value in DAC
+
+/**
+ * @fn void updateWave()
+ * @brief updates TIM2 parameters and LCD output based on
+ * currentMode, frequency, dutyCycle
+ *
+ */
+void updateWave() {
+	switch (currentMode) {
+		case SQUARE:
+			stopTIM2();
+			updateLCD();
+			squareWave(frequency, dutyCycle);
 			break;
-		case LOW:
-			DAC_latch_off(); // Set LDAC high to disable latch
-			DAC_write(V_HIGH); // Prepare high value in DAC
+		case SINE:
+			stopTIM2();
+			updateLCD();
+			sineWave(frequency);
 			break;
-		case WAIT:
+		case RAMP:
+			stopTIM2();
+			updateLCD();
+			free(rampArray); // Remove old ramp array (free malloc)
+			rampArray = createRampArray(frequency, polarity);
+			rampWave(frequency);
 			break;
 		default:
 			break;
@@ -439,13 +486,13 @@ void square(void) {
  *
  */
 void TIM2_IRQHandler(void) {
-	DAC_latch();
+
+	DAC_latch(); // Latch latest value to output on DAC
 	switch (currentMode) {
 		case SQUARE:
 			if (TIM2->SR & TIM_SR_UIF) {
 				TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
 				state = HIGH;
-				idx++;
 			}
 			else //(TIM2->SR & TIM_SR_CC1IF)
 			{
@@ -453,157 +500,73 @@ void TIM2_IRQHandler(void) {
 				state = LOW;
 			}
 			break;
-		default:
+		default: // when in ramp or square mode
 			TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
 			idx++;
+			latch = 1;
 			break;
 	}
-	/*if(TIM2->SR & TIM_SR_UIF) {
-		TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
-		state = HIGH;
-	 idx++;
-	}
-	else //(TIM2->SR & TIM_SR_CC1IF)
-	{
-		TIM2->SR &= ~TIM_SR_CC1IF; // clear the cc1 interrupt flag
-		state = LOW;
-	 }*/
 }
 
-
-
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-void SystemClock_Config(void)
-{
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+ * @brief System Clock Configuration
+ * @retval None
+ */
+void SystemClock_Config(void) {
+	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
+	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
 
-  /** Configure the main internal regulator output voltage
-  */
-  if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	/** Configure the main internal regulator output voltage
+	 */
+	if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1)
+			!= HAL_OK)
+			{
+		Error_Handler();
+	}
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
-  RCC_OscInitStruct.MSIState = RCC_MSI_ON;
+	/** Initializes the RCC Oscillators according to the specified parameters
+	 * in the RCC_OscInitTypeDef structure.
+	 */
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
+	RCC_OscInitStruct.MSIState = RCC_MSI_ON;
 	RCC_OscInitStruct.MSICalibrationValue = 0xFFU; //RCC_MSICALIBRATION_DEFAULT;
 	RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_10;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+			{
+		Error_Handler();
 	}
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	/** Initializes the CPU, AHB and APB buses clocks
+	 */
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK
+			| RCC_CLOCKTYPE_SYSCLK
+			| RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
 	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0)
+			!= HAL_OK)
+			{
+		Error_Handler();
+	}
 }
 
 /**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
-
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOG_CLK_ENABLE();
-  HAL_PWREx_EnableVddIO2();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LD3_Pin|LD2_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(USB_PowerSwitchOn_GPIO_Port, USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : LD3_Pin LD2_Pin */
-  GPIO_InitStruct.Pin = LD3_Pin|LD2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : USB_OverCurrent_Pin */
-  GPIO_InitStruct.Pin = USB_OverCurrent_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(USB_OverCurrent_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : USB_PowerSwitchOn_Pin */
-  GPIO_InitStruct.Pin = USB_PowerSwitchOn_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(USB_PowerSwitchOn_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : STLK_RX_Pin STLK_TX_Pin */
-  GPIO_InitStruct.Pin = STLK_RX_Pin|STLK_TX_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF8_LPUART1;
-  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : USB_SOF_Pin USB_ID_Pin USB_DM_Pin USB_DP_Pin */
-  GPIO_InitStruct.Pin = USB_SOF_Pin|USB_ID_Pin|USB_DM_Pin|USB_DP_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF10_OTG_FS;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
-}
-
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
-
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
-  /* USER CODE END Error_Handler_Debug */
+	/* USER CODE BEGIN Error_Handler_Debug */
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1)
+	{
+	}
+	/* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
