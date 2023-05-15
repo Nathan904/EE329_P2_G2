@@ -308,21 +308,9 @@ void updateLCD() {
 			break;
 		case SINE:
 			sineWvScreen(frequency);
-			/**
-			 *putDwordDecimalValue(pointPerCycle);
-			 *lcdWriteString(" PTS");
-			 **/
 			break;
 		case RAMP:
 			rampWvScreen(frequency);
-			/**
-			 * @TODO implement ramp polarity on 0 button
-			 *if (rampPolarity == 0){
-			 *	lcdWriteString("NEGATIVE");
-			 *} else {
-			 *	lcdWriteString("POSITIVE");
-			 *}
-			 **/
 			break;
 		default:
 			break;
@@ -357,7 +345,7 @@ void sineWvScreen(int freq) {
 	lcdWriteString("  LAST");
 
 	lcdSetCursor(1, 0);
-	lcdWritePTS(numPts);
+	lcdWritePTS(((SINE_SIZE) / (freq + 1)));
 
 	lcdSetCursor(1, 13);
 	lcdWriteKey(kpLast);
@@ -372,7 +360,7 @@ void squareWvScreen(int freq, float duty) {
 	lcdWriteString("  LAST");
 
 	lcdSetCursor(1, 0);
-	lcdWriteDuty(duty);
+	lcdWriteDuty(duty * 100);
 
 	lcdSetCursor(1, 13);
 	lcdWriteKey(kpLast);
