@@ -302,13 +302,6 @@ void checkUserInput(void) {
  *
  */
 void updateLCD() {
-	/**@brief
-	 * LCD COMMANDS:
-	 * lcdClearDisplay(void);
-	 * lcdSetCursor(line,col) @note line is 0 or 1
-	 * lcdSendChar(uint8_t val)
-	 * lcdWriteString("HELLO")
-	 */
 	switch (currentMode) {
 		case SQUARE:
 			squareWvScreen(frequency, dutyCycle);
@@ -316,7 +309,6 @@ void updateLCD() {
 		case SINE:
 			sineWvScreen(frequency);
 			/**
-			 *@TODO needs num of pts per cycle -> what's this for?
 			 *putDwordDecimalValue(pointPerCycle);
 			 *lcdWriteString(" PTS");
 			 **/
@@ -335,10 +327,6 @@ void updateLCD() {
 		default:
 			break;
 	}
-	lcdSetCursor(1, 13);
-	lcdSendChar(0x27); //sends ' char
-	lcdSendChar(kpLast + '0');
-	lcdSendChar(0x27);
 }
 
 void rampWvScreen(int freq) {
@@ -349,8 +337,12 @@ void rampWvScreen(int freq) {
 	lcdWriteFreq(freq);
 	lcdWriteString("  LAST");
 
-//	lcdSetCursor(1,0);
-//	lcdWritePTS(numPts);
+	lcdSetCursor(1,0);
+	if (polarity == POSITIVE){
+		lcdWriteString("POSITIVE");
+	} else {
+	 	lcdWriteString("NEGATIVE");
+	}
 
 	lcdSetCursor(1, 13);
 	lcdWriteKey(kpLast);
@@ -387,7 +379,6 @@ void squareWvScreen(int freq, float duty) {
 }
 
 void lcdWriteFreq(int freq) {
-	lcdWriteString("F=");
 	switch (freq) {
 		case 100:
 			lcdWriteString("100 Hz");
@@ -428,7 +419,7 @@ void lcdWriteDuty(float duty) {
 void lcdWriteKey(uint8_t key) {
 	lcdSendChar('\'');
 
-	if (kpLast < 0x9) {
+	if (kpLast <= 0x9) {
 		lcdSendChar(key + '0');
 	}
 	else {
@@ -439,7 +430,10 @@ void lcdWriteKey(uint8_t key) {
 }
 
 void lcdWritePTS(uint8_t points) {
-	lcdWriteString(points + '0');
+	lcdSendChar((points/1000) + '0');
+	lcdSendChar(((points%1000)/100) + '0');
+	lcdSendChar(((points%100)/10) + '0');
+	lcdSendChar((points%10) + '0');
 	lcdWriteString(" PTS");
 }
 
