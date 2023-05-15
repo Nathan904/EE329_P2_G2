@@ -75,7 +75,6 @@ char dutyCycleLCD[2] = { 5 + '0', 0 + '0' }; // char array for duty cycle
 uint8_t kpLast = 0x0U; // Global last keypad button pressed
 uint16_t **sineArrays; // 2d sine array global pointer
 uint16_t *rampArray;
-uint8_t numPts = 0;
 uint8_t latch = 0;
 Polarity polarity = POSITIVE;
 /***************************************************************************
@@ -137,12 +136,11 @@ int main(void) {
 
 /**
  * @fn void square(void)
- * @brief square wave manager
- * handles latch and writes to DAC
+ * @brief square wave manager handles latch and writes to DAC
  * @note sequence used for the square wave is as follows (assume start low):
  * (TIM2 CCR1IF)->Enables latch->(square() clears latch and writes high)
  * (TIM2    UIF)->Enables latch->(square() clears latch and writes low)
- * This repeats indefinintely
+ * This repeats indefinitely
  */
 void square(void) {
 	switch (state) {
@@ -296,12 +294,18 @@ void checkUserInput(void) {
 			break;
 	}
 }
+
+/***************************************************************************
+ * LCD Waveform Screen Functions
+ ***************************************************************************
+ */
+
 /**
- * @fn void updateLCD()
+ * @fn void updateLCD(void)
  * @brief updates LCD to match current mode/state
  *
  */
-void updateLCD() {
+void updateLCD(void) {
 	switch (currentMode) {
 		case SQUARE:
 			squareWvScreen(frequency, dutyCycle);
@@ -317,6 +321,15 @@ void updateLCD() {
 	}
 }
 
+/**
+ * @fn void rampWvScreen(int)
+ * @brief updates displays ramp screen information
+ * text displayed:
+ * "	SAW ###Hz LAST
+ * 		POSITIVE   '#'	"
+ *
+ * @param frequency
+ */
 void rampWvScreen(int freq) {
 	lcdClearDisplay();
 
@@ -336,6 +349,15 @@ void rampWvScreen(int freq) {
 	lcdWriteKey(kpLast);
 }
 
+/**
+ * @fn void sineWvScreen(int)
+ * @brief updates displays sine screen information
+ * text displayed:
+ * "	SIN ###Hz LAST
+ * 		#### PTS   '#'	"
+ *
+ * @param frequency
+ */
 void sineWvScreen(int freq) {
 	lcdClearDisplay();
 
@@ -345,12 +367,21 @@ void sineWvScreen(int freq) {
 	lcdWriteString("  LAST");
 
 	lcdSetCursor(1, 0);
-	lcdWritePTS(((SINE_SIZE) / (freq + 1)));
+	lcdWritePTS(((100*SINE_SIZE) / (freq + 1)));
 
 	lcdSetCursor(1, 13);
 	lcdWriteKey(kpLast);
 }
 
+/**
+ * @fn void squareWvScreen(int , float )
+ * @brief updates displays square wave screen information
+ * text displayed:
+ * "	SQR ###Hz LAST
+ * 		##.#% DUTY '#'	"
+ *
+ * @param frequency, duty cycle (as a decimal)
+ */
 void squareWvScreen(int freq, float duty) {
 	lcdClearDisplay();
 
@@ -366,6 +397,13 @@ void squareWvScreen(int freq, float duty) {
 	lcdWriteKey(kpLast);
 }
 
+/**
+ * @fn void squareWvScreen(int freq)
+ * @brief displays the current frequency on the LCD
+ *      at the current cursor position
+ *
+ *  @param frequency
+ */
 void lcdWriteFreq(int freq) {
 	switch (freq) {
 		case 100:
@@ -391,19 +429,26 @@ void lcdWriteFreq(int freq) {
 
 /**
  * @fn void lcdWriteDuty(float)
- * @brief
+ * @brief displays the duty cycle on the LCD at the current cursor position
  *
- * @param duty
+ * @param duty (as percent)
  */
 void lcdWriteDuty(float duty) {
-	lcdSendChar(((int) duty / 10) + '0');
-	lcdSendChar(((int) duty % 10) + '0');
+	lcdSendChar(((int) duty / 10) + '0');	// isolating each digit
+	lcdSendChar(((int) duty % 10) + '0');	// to display individually
 	lcdSendChar('.');
 	lcdSendChar(((int) (duty * 10)) % 10 + '0');
 	lcdSendChar('%');
 	lcdWriteString(" Duty");
 }
 
+/**
+ * @fn void lcdWriteKey(uint8_t)
+ * @brief displays the last pressed key on the LCD at the current
+ * cursor position
+ *
+ * @param key (in hex)
+ */
 void lcdWriteKey(uint8_t key) {
 	lcdSendChar('\'');
 
@@ -411,15 +456,23 @@ void lcdWriteKey(uint8_t key) {
 		lcdSendChar(key + '0');
 	}
 	else {
-		lcdSendChar(key + 0x37); //if one of the letters is pressed offset to proper spot in ascii table
+		lcdSendChar(key + 0x37); //if one of the letters is pressed
+							//offset to proper spot in ascii table
 	}
 
 	lcdSendChar('\'');
 }
 
-void lcdWritePTS(uint8_t points) {
-	lcdSendChar((points/1000) + '0');
-	lcdSendChar(((points%1000)/100) + '0');
+/**
+ * @fn void lcdWritePTS(int)
+ * @brief displays the number of points in the sine wave on the LCD
+ * at the current cursor position
+ *
+ * @param points (from 0>9999)
+ */
+void lcdWritePTS(int points) {
+	lcdSendChar((points/1000) + '0');		//isolating each digit to display
+	lcdSendChar(((points%1000)/100) + '0');	//individually
 	lcdSendChar(((points%100)/10) + '0');
 	lcdSendChar((points%10) + '0');
 	lcdWriteString(" PTS");

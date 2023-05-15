@@ -97,7 +97,7 @@ void sineWvScreen(int);
 void rampWvScreen(int);
 void lcdWriteFreq(int);
 void lcdWriteDuty(float);
-void lcdWritePTS(uint8_t);
+void lcdWritePTS(int);
 void lcdWriteKey(uint8_t);
 /* USER CODE END Private defines */
 
