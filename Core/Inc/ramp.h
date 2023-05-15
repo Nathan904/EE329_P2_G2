@@ -12,7 +12,7 @@
 #define INC_RAMP_H_
 #include "stm32l4xx_hal.h"
 
-#define RAMP_SIZE 2910 // S
+#define RAMP_SIZE 290 // S
 #define RAMP_MAX 2910U
 #define RAMP_MIN 0U
 void rampWave(uint16_t frequency);

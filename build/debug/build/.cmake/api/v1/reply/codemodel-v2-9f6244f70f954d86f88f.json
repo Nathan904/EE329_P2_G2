@@ -1,0 +1,59 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.20"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "EE329_P2_G2",
+					"targetIndexes" : 
+					[
+						0
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "EE329_P2_G2::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-EE329_P2_G2-Debug-70bca8a05271120254ac.json",
+					"name" : "EE329_P2_G2",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/Users/natha/OneDrive - Cal Poly/class/EE329/EE329_workspace/EE329_P2_G2/build/debug/build",
+		"source" : "C:/Users/natha/OneDrive - Cal Poly/class/EE329/EE329_workspace/EE329_P2_G2"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 2
+	}
+}

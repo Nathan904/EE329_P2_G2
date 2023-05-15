@@ -77,6 +77,7 @@ uint16_t **sineArrays; // 2d sine array global pointer
 uint16_t *rampArray;
 uint8_t latch = 0;
 Polarity polarity = POSITIVE;
+uint16_t sineSizes[FREQUENCY_COUNT];
 /***************************************************************************
  * End Global Variables
  ***************************************************************************
@@ -103,14 +104,20 @@ int main(void) {
 
 	// start program at 100 Hz 50% duty cycle square wave
 	squareWave(frequency, dutyCycle);
-
+	for (int i = 0; i < FREQUENCY_COUNT; i++) {
+		sineSizes[i] = (SINE_SIZE / i) + 0.5;
+	}
+	updateWave();
+	DAC_latch();
+	currentMode = RAMP;
+	updateWave();
 	while (1)
 	{
 		/**
 		 * @brief
 		 * Switch calls corresponding function for each mode
 		 */
-		switch (currentMode) {
+			switch (currentMode) {
 			case SQUARE:
 				square();
 				break;
@@ -122,8 +129,7 @@ int main(void) {
 				break;
 			default:
 				break;
-		}
-
+			}
 		// Check Keypad for user input
 		checkUserInput();
 	}
@@ -168,8 +174,11 @@ void ramp(void) {
 	//DAC_latch_off(); // Set LDAC high to disable latch
 	// Reset idx to beginning of array if it has sent final value
 	idx = (idx >= rampSize) ? (0) : (idx);
-
+	if (latch) {
+		idx++;
 	DAC_write(rampArray[idx]); // Prepare high value in DAC
+		latch = 0;
+	}
 
 }
 
@@ -179,12 +188,13 @@ void ramp(void) {
  *
  */
 void sine(void) {
-
+	//DAC_latch_off();
 	// Reset idx to beginning of array if it has sent final value
-	idx = (idx >= (((SINE_SIZE) / (freq + 1)))) ? (0) : (idx);
+	idx = (idx > (SINE_SIZE / (freq + 1))) ? (0) : (idx);
 	if (latch) {
-		DAC_write(sineArrays[freq][idx]); // Prepare high value in DAC
+		idx++;
 		latch = 0;
+		DAC_write(sineArrays[freq][idx]); // Prepare high value in DAC
 	}
 }
 
@@ -269,8 +279,8 @@ void checkUserInput(void) {
 		case 0x6:
 			kpLast = kp;
 			currentMode = SINE;
-			freq = ONE;
-			frequency = 100;
+			//freq = ONE;
+			//frequency = 100;
 			updateWave();
 			break;
 		case 0x7:
@@ -499,11 +509,13 @@ void updateWave() {
 		case SINE:
 			stopTIM2();
 			updateLCD();
+			DAC_latch();
 			sineWave(frequency);
 			break;
 		case RAMP:
 			stopTIM2();
 			updateLCD();
+			DAC_latch();
 			free(rampArray); // Remove old ramp array (free malloc)
 			rampArray = createRampArray(frequency, polarity);
 			rampWave(frequency);
@@ -521,25 +533,45 @@ void updateWave() {
  *
  */
 void TIM2_IRQHandler(void) {
-
-	DAC_latch(); // Latch latest value to output on DAC
-	switch (currentMode) {
+	TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
+	latch = 1;
+	/*	switch (currentMode) {
 		case SQUARE:
 			if (TIM2->SR & TIM_SR_UIF) {
+				DAC_latch(); // Latch latest value to output on DAC
 				TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
 				state = HIGH;
 			}
 			else //(TIM2->SR & TIM_SR_CC1IF)
 			{
+				DAC_latch(); // Latch latest value to output on DAC
 				TIM2->SR &= ~TIM_SR_CC1IF; // clear the cc1 interrupt flag
 				state = LOW;
 			}
+			square();
 			break;
-		default: // when in ramp or square mode
+		case SINE:
 			TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
 			idx++;
+			//sine();
 			latch = 1;
 			break;
+		case RAMP:
+			TIM2->SR &= ~TIM_SR_UIF; // clear the update interrupt flag
+			idx++;
+			//ramp();
+			latch = 1;
+			break;
+		default:
+			break;
+	 }*/
+	if (currentMode == SQUARE) {
+		DAC_latch();
+		state = HIGH;
+		if (TIM2->SR & TIM_SR_CC1IF) {
+			TIM2->SR &= ~TIM_SR_CC1IF;
+			state = LOW;
+		}
 	}
 }
 
@@ -547,11 +579,12 @@ void TIM2_IRQHandler(void) {
  * @brief System Clock Configuration
  * @retval None
  */
-void SystemClock_Config(void) {
+void SystemClock_Config(void)
+{
 	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
 	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
 
-	/** Configure the main internal regulator output voltage
+  /** Configure the main internal regulator output voltage
 	 */
 	if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1)
 			!= HAL_OK)
@@ -559,12 +592,12 @@ void SystemClock_Config(void) {
 		Error_Handler();
 	}
 
-	/** Initializes the RCC Oscillators according to the specified parameters
+  /** Initializes the RCC Oscillators according to the specified parameters
 	 * in the RCC_OscInitTypeDef structure.
 	 */
 	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
 	RCC_OscInitStruct.MSIState = RCC_MSI_ON;
-	RCC_OscInitStruct.MSICalibrationValue = 0xFFU; //RCC_MSICALIBRATION_DEFAULT;
+	RCC_OscInitStruct.MSICalibrationValue = 0;
 	RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_10;
 	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
 	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -572,18 +605,16 @@ void SystemClock_Config(void) {
 		Error_Handler();
 	}
 
-	/** Initializes the CPU, AHB and APB buses clocks
+  /** Initializes the CPU, AHB and APB buses clocks
 	 */
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK
-			| RCC_CLOCKTYPE_SYSCLK
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
 			| RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
 	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
 	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
 	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0)
-			!= HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
 			{
 		Error_Handler();
 	}

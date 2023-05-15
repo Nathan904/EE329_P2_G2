@@ -18,26 +18,6 @@ void rampWave(uint16_t frequency) {
 
 	uint32_t reloadVal = (SystemCoreClock) / (RAMP_SIZE * 100);
 
-	/**
-	 * @TODO add adjustment factors to fine tune frequencies
-	 * can do this in sine.c too
-	 */
-	switch (frequency) {
-		case 100:
-			//reloadVal += 1;
-			break;
-		case 200:
-			reloadVal -= 1;
-			break;
-		case 300:
-			break;
-		case 400:
-			break;
-		case 500:
-			break;
-		default:
-			break;
-	}
 	initTIM2(reloadVal);
 }
 

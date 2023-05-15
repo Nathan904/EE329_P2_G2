@@ -1,0 +1,3 @@
+C:/Users/natha/OneDrive - Cal Poly/class/EE329/EE329_workspace/EE329_P2_G2/build/debug/build/CMakeFiles/edit_cache.dir
+C:/Users/natha/OneDrive - Cal Poly/class/EE329/EE329_workspace/EE329_P2_G2/build/debug/build/CMakeFiles/EE329_P2_G2.dir
+C:/Users/natha/OneDrive - Cal Poly/class/EE329/EE329_workspace/EE329_P2_G2/build/debug/build/CMakeFiles/rebuild_cache.dir

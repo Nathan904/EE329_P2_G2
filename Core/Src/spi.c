@@ -28,6 +28,7 @@ void SPI_init(void) {
 	SPI1->CR1 &= ~( SPI_CR1_LSBFIRST);        	// data bit order MSb:LSb
 	SPI1->CR1 &= ~( SPI_CR1_CPOL | SPI_CR1_CPHA); // SCLK polarity:phase = 0:0
 	SPI1->CR1 |= SPI_CR1_MSTR;              	// MCU is SPI controller
+	SPI1->CR1 &= ~SPI_CR1_BR;
 
 	SPI1->CR2 &= ~( SPI_CR2_TXEIE | SPI_CR2_RXNEIE); // disable FIFO intrpts
 	SPI1->CR2 &= ~( SPI_CR2_FRF);              	// Moto frame format
