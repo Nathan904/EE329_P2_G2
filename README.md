@@ -1,4 +1,4 @@
-# STM32L4A6ZG Waveform Generator
+# NUCLEO-STM32L4A6ZG Waveform Generator
 
 This repository contains a C program designed for the STM32L4A6ZG Nucleo board. The program generates and controls different types of waveforms (square, sine, and ramp) at various frequencies (100Hz, 200Hz, 300Hz, 400Hz, 500Hz) using a Digital-to-Analog Converter (DAC).
 The program also allows for user interaction via a keypad and provides feedback through an LCD display.
